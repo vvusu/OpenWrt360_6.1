@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG="$ROOT_DIR/configs/jdcloud-ax1800-pro.config"
+WORKFLOW="$ROOT_DIR/.github/workflows/JDCLOUD-AX1800-PRO.yml"
+VERIFIER="$ROOT_DIR/scripts/verify-jdcloud-ax1800-pro-image.sh"
+
+fail() {
+    echo "FAIL: $*" >&2
+    exit 1
+}
+
+assert_contains() {
+    local file="$1"
+    local text="$2"
+    grep -F -- "$text" "$file" >/dev/null || fail "$file is missing: $text"
+}
+
+test -f "$CONFIG" || fail "missing dedicated JDCloud config"
+test -f "$WORKFLOW" || fail "missing dedicated JDCloud workflow"
+test -x "$VERIFIER" || fail "missing executable image verifier"
+
+assert_contains "$CONFIG" 'CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y'
+assert_contains "$CONFIG" 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01="ipq-wifi-jdcloud_re-ss-01"'
+
+device_count="$(grep -Ec '^CONFIG_TARGET_DEVICE_.*=y$' "$CONFIG")"
+[[ "$device_count" == "1" ]] || fail "dedicated config selects $device_count devices"
+
+for package in \
+    luci-app-homeproxy sing-box luci-app-mosdns luci-app-tailscale \
+    luci-app-ddns-go luci-app-ttyd openssh-sftp-server \
+    luci-app-wol luci-app-watchcat luci-app-irqbalance \
+    luci-app-nlbwmon luci-app-filemanager luci-app-upnp \
+    luci-app-sqm luci-app-ksmbd block-mount kmod-fs-ext4 \
+    htop ethtool; do
+    assert_contains "$CONFIG" "CONFIG_PACKAGE_${package}=y"
+done
+
+for package in luci-app-openclash luci-app-passwall luci-app-mihomo \
+    mihomo adguardhome luci-app-adguardhome docker dockerd; do
+    if grep -F "CONFIG_PACKAGE_${package}=y" "$CONFIG" >/dev/null; then
+        fail "dedicated config must exclude $package"
+    fi
+done
+
+assert_contains "$WORKFLOW" 'SOURCE_BRANCH: 25.12-nss'
+assert_contains "$WORKFLOW" 'MOSDNS_COMMIT: b230ca12cba16aab2c163452bfd76f1631e2a537'
+assert_contains "$WORKFLOW" 'TAILSCALE_LUCI_COMMIT: 534eb3f3acba24dac4e6fee9fa33049b004ef121'
+assert_contains "$WORKFLOW" 'CONFIG_FILE: configs/jdcloud-ax1800-pro.config'
+assert_contains "$WORKFLOW" 'verify-jdcloud-ax1800-pro-image.sh'
+assert_contains "$VERIFIER" 'MAX_FACTORY_SIZE_BYTES=62914560'
+assert_contains "$VERIFIER" 'jdcloud_re-ss-01-squashfs-factory.bin'
+
+fixture="$(mktemp -d "${TMPDIR:-/tmp}/jdcloud-old-image-test.XXXXXX")"
+trap 'rm -rf "$fixture"' EXIT
+truncate -s 1048576 "$fixture/libwrt-qualcommax-ipq60xx-jdcloud_re-ss-01-squashfs-factory.bin"
+truncate -s 2097152 "$fixture/libwrt-qualcommax-ipq60xx-jdcloud_re-ss-01-squashfs-sysupgrade.bin"
+bash "$VERIFIER" "$fixture" >/dev/null
+
+truncate -s 62914561 "$fixture/libwrt-qualcommax-ipq60xx-jdcloud_re-ss-01-squashfs-factory.bin"
+if bash "$VERIFIER" "$fixture" >/dev/null 2>&1; then
+    fail "verifier accepted an oversized factory image"
+fi
+
+echo "PASS: dedicated JDCloud AX1800 Pro build configuration"

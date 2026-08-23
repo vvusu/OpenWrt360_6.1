@@ -1,0 +1,134 @@
+name: JDCloud AX1800 Pro (25.12 NSS)
+
+on:
+  workflow_dispatch:
+
+env:
+  SOURCE_REPO: https://github.com/LiBwrt/LibWrt.git
+  SOURCE_BRANCH: 25.12-nss
+  MOSDNS_COMMIT: b230ca12cba16aab2c163452bfd76f1631e2a537
+  TAILSCALE_LUCI_COMMIT: 534eb3f3acba24dac4e6fee9fa33049b004ef121
+  CONFIG_FILE: configs/jdcloud-ax1800-pro.config
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout build configuration
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: easimon/maximize-build-space@master
+        with:
+          swap-size-mb: 1024
+          temp-reserve-mb: 100
+          root-reserve-mb: 2048
+
+      - name: Install build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
+            python3-setuptools rsync swig unzip zlib1g-dev file wget python3 \
+            python3-pyelftools libelf-dev ecj fastjar java-propose-classpath \
+            subversion asciidoc binutils bzip2 libz-dev lib32gcc-s1 libc6-dev-i386 \
+            uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libreadline-dev \
+            libglib2.0-dev xmlto qemu-utils upx-ucl antlr3 device-tree-compiler
+
+      - name: Checkout LibWrt 25.12 NSS source
+        run: |
+          git init openwrt
+          cd openwrt
+          git remote add origin "$SOURCE_REPO"
+          git fetch --depth=1 origin "$SOURCE_BRANCH"
+          git checkout --detach FETCH_HEAD
+          echo "SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "OPENWRT_PATH=$PWD" >> "$GITHUB_ENV"
+
+      - name: Add pinned LuCI packages
+        run: |
+          cd "$OPENWRT_PATH"
+          mkdir -p package/community /tmp/jdcloud-packages
+
+          git -C /tmp/jdcloud-packages init mosdns
+          git -C /tmp/jdcloud-packages/mosdns remote add origin https://github.com/sbwml/luci-app-mosdns.git
+          git -C /tmp/jdcloud-packages/mosdns fetch --depth=1 origin "$MOSDNS_COMMIT"
+          git -C /tmp/jdcloud-packages/mosdns checkout --detach FETCH_HEAD
+          cp -a /tmp/jdcloud-packages/mosdns/luci-app-mosdns package/community/
+          cp -a /tmp/jdcloud-packages/mosdns/mosdns package/community/
+          cp -a /tmp/jdcloud-packages/mosdns/v2dat package/community/
+
+          git -C /tmp/jdcloud-packages init tailscale-luci
+          git -C /tmp/jdcloud-packages/tailscale-luci remote add origin https://github.com/asvow/luci-app-tailscale.git
+          git -C /tmp/jdcloud-packages/tailscale-luci fetch --depth=1 origin "$TAILSCALE_LUCI_COMMIT"
+          git -C /tmp/jdcloud-packages/tailscale-luci checkout --detach FETCH_HEAD
+          mkdir -p package/community/luci-app-tailscale
+          cp -a /tmp/jdcloud-packages/tailscale-luci/. package/community/luci-app-tailscale/
+          rm -rf package/community/luci-app-tailscale/.git
+
+      - name: Install feeds
+        run: |
+          cd "$OPENWRT_PATH"
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          rm -f package/feeds/packages/mosdns
+
+      - name: Validate and load dedicated configuration
+        run: |
+          cp "$GITHUB_WORKSPACE/$CONFIG_FILE" "$OPENWRT_PATH/.config"
+          cd "$OPENWRT_PATH"
+          make defconfig
+          grep -q '^CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y$' .config
+          for package in luci-app-homeproxy sing-box luci-app-mosdns \
+            luci-app-tailscale luci-app-ddns-go luci-app-nlbwmon \
+            luci-app-filemanager luci-app-upnp luci-app-sqm luci-app-ksmbd; do
+            grep -q "^CONFIG_PACKAGE_${package}=y$" .config || {
+              echo "Missing package after make defconfig: $package" >&2
+              exit 1
+            }
+          done
+
+      - name: Download sources
+        run: |
+          cd "$OPENWRT_PATH"
+          make download -j8
+          if find dl -type f -size -1024c -print -quit | grep -q .; then
+            echo "Incomplete downloads found" >&2
+            find dl -type f -size -1024c -print
+            exit 1
+          fi
+
+      - name: Build firmware
+        run: |
+          cd "$OPENWRT_PATH"
+          mkdir -p files/etc/uci-defaults
+          cp "$GITHUB_WORKSPACE/scripts/init-settings.sh" files/etc/uci-defaults/99-init-settings
+          make -j"$(nproc)" || make -j1 V=s
+
+      - name: Verify factory image safety
+        run: |
+          bash "$GITHUB_WORKSPACE/scripts/verify-jdcloud-ax1800-pro-image.sh" \
+            "$OPENWRT_PATH/bin/targets"
+
+      - name: Collect JDCloud artifacts
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          find "$OPENWRT_PATH/bin/targets" -type f \
+            \( -name '*jdcloud_re-ss-01*' -o -name sha256sums \
+               -o -name profiles.json -o -name '*.manifest' \) \
+            -exec cp -f {} "$GITHUB_WORKSPACE/artifacts/" \;
+          cp "$OPENWRT_PATH/.config" "$GITHUB_WORKSPACE/artifacts/build.config"
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jdcloud-ax1800-pro-25.12-nss
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
