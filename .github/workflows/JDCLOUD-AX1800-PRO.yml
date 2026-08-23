@@ -21,13 +21,6 @@ jobs:
       - name: Checkout build configuration
         uses: actions/checkout@v4
 
-      - name: Free disk space
-        uses: easimon/maximize-build-space@master
-        with:
-          swap-size-mb: 1024
-          temp-reserve-mb: 100
-          root-reserve-mb: 2048
-
       - name: Install build dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -40,6 +33,14 @@ jobs:
             subversion asciidoc binutils bzip2 libz-dev lib32gcc-s1 libc6-dev-i386 \
             uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libreadline-dev \
             libglib2.0-dev xmlto qemu-utils upx-ucl antlr3 device-tree-compiler
+          sudo apt-get clean
+
+      - name: Free disk space
+        uses: easimon/maximize-build-space@master
+        with:
+          swap-size-mb: 1024
+          temp-reserve-mb: 100
+          root-reserve-mb: 2048
 
       - name: Checkout LibWrt 25.12 NSS source
         run: |

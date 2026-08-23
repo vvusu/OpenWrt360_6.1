@@ -47,6 +47,11 @@ done
 assert_contains "$WORKFLOW" 'SOURCE_BRANCH: 25.12-nss'
 assert_contains "$WORKFLOW" 'MOSDNS_COMMIT: b230ca12cba16aab2c163452bfd76f1631e2a537'
 assert_contains "$WORKFLOW" 'TAILSCALE_LUCI_COMMIT: 534eb3f3acba24dac4e6fee9fa33049b004ef121'
+
+dependency_line="$(grep -n -- '- name: Install build dependencies' "$WORKFLOW" | cut -d: -f1)"
+disk_line="$(grep -n -- '- name: Free disk space' "$WORKFLOW" | cut -d: -f1)"
+[[ "$dependency_line" -lt "$disk_line" ]] || \
+    fail "build dependencies must be installed before repartitioning runner disk space"
 assert_contains "$WORKFLOW" 'CONFIG_FILE: configs/jdcloud-ax1800-pro.config'
 assert_contains "$WORKFLOW" 'verify-jdcloud-ax1800-pro-image.sh'
 assert_contains "$VERIFIER" 'MAX_FACTORY_SIZE_BYTES=62914560'
