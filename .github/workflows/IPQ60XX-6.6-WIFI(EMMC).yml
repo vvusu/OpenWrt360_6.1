@@ -8,6 +8,13 @@ on:
 env:
   REPO_URL: https://github.com/breeze303/ipq60xx-6.6.git
   REPO_COMMIT: bfe94963ec1933333cdd09d09a6fa3d335aebf60
+  NSS_PACKAGES_COMMIT: 061e717e065edfecd939a98510334b356064a079
+  SQM_NSS_COMMIT: 4b4ed8639229be5e70cf94b73cdf7dbc09e66d5d
+  PACKAGES_COMMIT: 0d18846dab8aba7a2c7a0ad3feeae42660fac36f
+  LUCI_COMMIT: 74eef5c7d99c46c3d5cfcd4be847feef53467c85
+  ROUTING_COMMIT: 9eda32a8c96fc184e6b208a54dbf43a1379fa0be
+  TELEPHONY_COMMIT: 70d6a028ab7ba209c232987c2126291e0903c242
+  VIDEO_COMMIT: 2ebf064c0583f031dc41e4c1bf4f404bbcd3f3c7
   CONFIG_FILE: configs/ipq60xx-6.6-wifi(emmc).config
   DIY_SCRIPT: diy-script.sh
   CLASH_KERNEL: amd64
@@ -74,6 +81,19 @@ jobs:
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
         VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
         echo "VERSION_INFO=$VERSION_INFO" >> $GITHUB_ENV
+
+    - name: Pin feeds to 6.6-compatible revisions
+      run: |
+        cd "$OPENWRT_PATH"
+        sed -i "s#https://github.com/qosmio/nss-packages.git#https://github.com/qosmio/nss-packages.git^$NSS_PACKAGES_COMMIT#" feeds.conf.default
+        sed -i "s#https://github.com/qosmio/sqm-scripts-nss.git#https://github.com/qosmio/sqm-scripts-nss.git^$SQM_NSS_COMMIT#" feeds.conf.default
+        sed -i "s#https://github.com/immortalwrt/packages.git#https://github.com/immortalwrt/packages.git^$PACKAGES_COMMIT#" feeds.conf.default
+        sed -i "s#https://github.com/immortalwrt/luci.git#https://github.com/immortalwrt/luci.git^$LUCI_COMMIT#" feeds.conf.default
+        sed -i "s#https://github.com/openwrt/routing.git#https://github.com/openwrt/routing.git^$ROUTING_COMMIT#" feeds.conf.default
+        sed -i "s#https://github.com/openwrt/telephony.git#https://github.com/openwrt/telephony.git^$TELEPHONY_COMMIT#" feeds.conf.default
+        sed -i "s#https://github.com/openwrt/video.git#https://github.com/openwrt/video.git^$VIDEO_COMMIT#" feeds.conf.default
+        grep -q "packages.git^$PACKAGES_COMMIT" feeds.conf.default
+        grep -q "luci.git^$LUCI_COMMIT" feeds.conf.default
 
     - name: Generate Variables
       run: |

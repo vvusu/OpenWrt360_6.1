@@ -7,7 +7,7 @@ env:
   SOURCE_REPO: https://github.com/LiBwrt/LibWrt.git
   SOURCE_BRANCH: main-nss
   SOURCE_COMMIT: df3fe8169fc0d63afea13c69d83bae21c92b3300
-  CONFIG_FILE: configs/jdcloud-ax1800-pro.config
+  CONFIG_FILE: configs/ipq60xx-6.12-wifi-emmc.config
   MOSDNS_COMMIT: b230ca12cba16aab2c163452bfd76f1631e2a537
   TAILSCALE_LUCI_COMMIT: 534eb3f3acba24dac4e6fee9fa33049b004ef121
   TZ: Asia/Shanghai
@@ -87,7 +87,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/$CONFIG_FILE" "$OPENWRT_PATH/.config"
           cd "$OPENWRT_PATH"
           make defconfig
-          grep -Eq '^CONFIG_TARGET(_DEVICE)?_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y$' .config || {
+          grep -q '^CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y$' .config || {
             echo "JDCloud RE-SS-01 target was not selected after make defconfig" >&2
             grep '^CONFIG_TARGET.*qualcommax' .config >&2 || true
             exit 1
