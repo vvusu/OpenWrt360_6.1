@@ -19,9 +19,6 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout build configuration
-        uses: actions/checkout@v4
-
       - name: Install build dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -42,6 +39,9 @@ jobs:
           swap-size-mb: 1024
           temp-reserve-mb: 100
           root-reserve-mb: 2048
+
+      - name: Checkout build configuration
+        uses: actions/checkout@v4
 
       - name: Checkout pinned LibWrt 6.12 NSS source
         run: |

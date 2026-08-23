@@ -27,4 +27,11 @@ if grep -F 'docker rmi $(docker images -q)' "$WORKFLOW" >/dev/null; then
     exit 1
 fi
 
+disk_line="$(grep -n -- '- name: Free disk space' "$WORKFLOW" | cut -d: -f1)"
+checkout_line="$(grep -n -- '- name: Checkout build configuration' "$WORKFLOW" | cut -d: -f1)"
+[[ "$disk_line" -lt "$checkout_line" ]] || {
+    echo "FAIL: repository checkout must happen after runner disk remount" >&2
+    exit 1
+}
+
 echo "PASS: IPQ60XX 6.12 Wi-Fi EMMC workflow is pinned and guarded"
