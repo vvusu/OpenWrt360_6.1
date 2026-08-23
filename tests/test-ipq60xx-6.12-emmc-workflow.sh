@@ -14,13 +14,22 @@ for expected in \
     'SOURCE_COMMIT: df3fe8169fc0d63afea13c69d83bae21c92b3300' \
     'CONFIG_FILE: configs/jdcloud-ax1800-pro.config' \
     'KERNEL_PATCHVER:=6.12' \
-    'CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y' \
     'verify-jdcloud-ax1800-pro-image.sh'; do
     grep -F "$expected" "$WORKFLOW" >/dev/null || {
         echo "FAIL: 6.12 workflow is missing: $expected" >&2
         exit 1
     }
 done
+
+grep -F "grep -Eq '^CONFIG_TARGET(_DEVICE)?_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y$' .config" "$WORKFLOW" >/dev/null || {
+    echo "FAIL: device validation does not accept both LibWrt target symbol formats" >&2
+    exit 1
+}
+
+grep -F "Missing package after make defconfig:" "$WORKFLOW" >/dev/null || {
+    echo "FAIL: package validation does not report the missing package" >&2
+    exit 1
+}
 
 if grep -F 'docker rmi $(docker images -q)' "$WORKFLOW" >/dev/null; then
     echo "FAIL: empty Docker image list invokes docker rmi without arguments" >&2
