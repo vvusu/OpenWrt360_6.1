@@ -59,4 +59,13 @@ checkout_line="$(grep -n -- '- name: Checkout build configuration' "$WORKFLOW" |
     exit 1
 }
 
+for duplicate in \
+    'package/community/luci-app-tailscale/root/etc/config/tailscale' \
+    'package/community/luci-app-tailscale/root/etc/init.d/tailscale'; do
+    grep -F "rm -f $duplicate" "$WORKFLOW" >/dev/null || {
+        echo "FAIL: third-party Tailscale LuCI package still owns core file: $duplicate" >&2
+        exit 1
+    }
+done
+
 echo "PASS: IPQ60XX 6.12 Wi-Fi EMMC workflow is pinned and guarded"

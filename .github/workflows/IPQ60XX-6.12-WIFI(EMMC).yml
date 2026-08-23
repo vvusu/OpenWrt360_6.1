@@ -74,6 +74,10 @@ jobs:
           mkdir -p package/community/luci-app-tailscale
           cp -a /tmp/jdcloud-packages/tailscale-luci/. package/community/luci-app-tailscale/
           rm -rf package/community/luci-app-tailscale/.git
+          # The current core Tailscale package owns these runtime files.
+          # Keep the third-party package for LuCI only to avoid APK collisions.
+          rm -f package/community/luci-app-tailscale/root/etc/config/tailscale
+          rm -f package/community/luci-app-tailscale/root/etc/init.d/tailscale
 
       - name: Install feeds
         run: |

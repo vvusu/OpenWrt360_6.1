@@ -49,4 +49,14 @@ grep -F -- '- name: Pin feeds to 6.6-compatible revisions' "$WORKFLOW" >/dev/nul
     exit 1
 }
 
+if grep -F '*.ipk' "$WORKFLOW" >/dev/null; then
+    echo "FAIL: 6.6 artifact collection still assumes the removed OPKG/IPK format" >&2
+    exit 1
+fi
+
+grep -F -- "-name '*.apk'" "$WORKFLOW" >/dev/null || {
+    echo "FAIL: 6.6 artifact collection does not collect APK packages" >&2
+    exit 1
+}
+
 echo "PASS: IPQ60XX 6.6 EMMC workflow handles an empty Docker image list"
