@@ -25,4 +25,9 @@ grep -F 'CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y' "$CONFIG" >
     exit 1
 }
 
+if grep -F '0001-show-soc-status-on-luci.patch' "$WORKFLOW" >/dev/null; then
+    echo "FAIL: workflow applies an obsolete LuCI status patch" >&2
+    exit 1
+fi
+
 echo "PASS: IPQ60XX 6.6 EMMC workflow handles an empty Docker image list"
