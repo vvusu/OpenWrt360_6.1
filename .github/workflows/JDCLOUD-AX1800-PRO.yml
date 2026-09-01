@@ -89,7 +89,11 @@ jobs:
           cp "$GITHUB_WORKSPACE/$CONFIG_FILE" "$OPENWRT_PATH/.config"
           cd "$OPENWRT_PATH"
           make defconfig
-          grep -q '^CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y$' .config
+          grep -q '^CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y$' .config || {
+            echo "JDCloud RE-SS-01 target was not selected after make defconfig" >&2
+            grep '^CONFIG_TARGET.*qualcommax' .config >&2 || true
+            exit 1
+          }
           for package in luci-app-homeproxy sing-box luci-app-mosdns \
             luci-app-tailscale luci-app-ddns-go luci-app-nlbwmon \
             luci-app-filemanager luci-app-upnp luci-app-sqm luci-app-ksmbd; do

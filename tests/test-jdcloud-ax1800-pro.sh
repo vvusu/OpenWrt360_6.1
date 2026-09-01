@@ -21,10 +21,14 @@ test -f "$CONFIG" || fail "missing dedicated JDCloud config"
 test -f "$WORKFLOW" || fail "missing dedicated JDCloud workflow"
 test -x "$VERIFIER" || fail "missing executable image verifier"
 
-assert_contains "$CONFIG" 'CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y'
+assert_contains "$CONFIG" 'CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y'
 assert_contains "$CONFIG" 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01="ipq-wifi-jdcloud_re-ss-01"'
 
-device_count="$(grep -Ec '^CONFIG_TARGET_DEVICE_.*=y$' "$CONFIG")"
+if grep -F 'CONFIG_TARGET_DEVICE_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y' "$CONFIG" >/dev/null; then
+    fail "dedicated config still uses the rejected 25.12 device symbol"
+fi
+
+device_count="$(grep -Ec '^CONFIG_TARGET_(DEVICE_)?[^_]+_[^_]+_DEVICE_.*=y$' "$CONFIG")"
 [[ "$device_count" == "1" ]] || fail "dedicated config selects $device_count devices"
 
 for package in \
@@ -56,6 +60,8 @@ checkout_line="$(grep -n -- '- name: Checkout build configuration' "$WORKFLOW" |
 [[ "$disk_line" -lt "$checkout_line" ]] || \
     fail "repository checkout must happen after runner disk remount"
 assert_contains "$WORKFLOW" 'CONFIG_FILE: configs/jdcloud-ax1800-pro.config'
+assert_contains "$WORKFLOW" "grep -q '^CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y$' .config"
+assert_contains "$WORKFLOW" 'JDCloud RE-SS-01 target was not selected after make defconfig'
 assert_contains "$WORKFLOW" 'verify-jdcloud-ax1800-pro-image.sh'
 assert_contains "$VERIFIER" 'MAX_FACTORY_SIZE_BYTES=62914560'
 assert_contains "$VERIFIER" 'jdcloud_re-ss-01-squashfs-factory.bin'
