@@ -50,12 +50,21 @@ assert_contains "$WORKFLOW" 'TAILSCALE_LUCI_COMMIT: 534eb3f3acba24dac4e6fee9fa33
 
 dependency_line="$(grep -n -- '- name: Install build dependencies' "$WORKFLOW" | cut -d: -f1)"
 disk_line="$(grep -n -- '- name: Free disk space' "$WORKFLOW" | cut -d: -f1)"
+checkout_line="$(grep -n -- '- name: Checkout build configuration' "$WORKFLOW" | cut -d: -f1)"
 [[ "$dependency_line" -lt "$disk_line" ]] || \
     fail "build dependencies must be installed before repartitioning runner disk space"
+[[ "$disk_line" -lt "$checkout_line" ]] || \
+    fail "repository checkout must happen after runner disk remount"
 assert_contains "$WORKFLOW" 'CONFIG_FILE: configs/jdcloud-ax1800-pro.config'
 assert_contains "$WORKFLOW" 'verify-jdcloud-ax1800-pro-image.sh'
 assert_contains "$VERIFIER" 'MAX_FACTORY_SIZE_BYTES=62914560'
 assert_contains "$VERIFIER" 'jdcloud_re-ss-01-squashfs-factory.bin'
+
+for duplicate in \
+    'package/community/luci-app-tailscale/root/etc/config/tailscale' \
+    'package/community/luci-app-tailscale/root/etc/init.d/tailscale'; do
+    assert_contains "$WORKFLOW" "rm -f $duplicate"
+done
 
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/jdcloud-old-image-test.XXXXXX")"
 trap 'rm -rf "$fixture"' EXIT

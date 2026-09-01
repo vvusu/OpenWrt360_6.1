@@ -18,9 +18,6 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout build configuration
-        uses: actions/checkout@v4
-
       - name: Install build dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -41,6 +38,9 @@ jobs:
           swap-size-mb: 1024
           temp-reserve-mb: 100
           root-reserve-mb: 2048
+
+      - name: Checkout build configuration
+        uses: actions/checkout@v4
 
       - name: Checkout LibWrt 25.12 NSS source
         run: |
@@ -72,6 +72,10 @@ jobs:
           mkdir -p package/community/luci-app-tailscale
           cp -a /tmp/jdcloud-packages/tailscale-luci/. package/community/luci-app-tailscale/
           rm -rf package/community/luci-app-tailscale/.git
+          # The core Tailscale package owns these runtime files.
+          # Keep this third-party package for its LuCI interface only.
+          rm -f package/community/luci-app-tailscale/root/etc/config/tailscale
+          rm -f package/community/luci-app-tailscale/root/etc/init.d/tailscale
 
       - name: Install feeds
         run: |
