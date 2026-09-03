@@ -45,7 +45,7 @@ for package in \
     luci-app-wol luci-app-watchcat luci-app-irqbalance \
     luci-app-nlbwmon luci-app-filemanager luci-app-upnp \
     luci-app-sqm luci-app-ksmbd block-mount kmod-fs-ext4 \
-    htop ethtool luci-app-store; do
+    htop ethtool luci-app-store xz-utils; do
     assert_contains "$CONFIG" "CONFIG_PACKAGE_${package}=y"
 done
 
