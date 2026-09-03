@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG="$ROOT_DIR/configs/jdcloud-ax1800-pro.config"
 WORKFLOW="$ROOT_DIR/.github/workflows/JDCLOUD-AX1800-PRO.yml"
 VERIFIER="$ROOT_DIR/scripts/verify-jdcloud-ax1800-pro-image.sh"
+HOMEPROXY_DEFAULT="$ROOT_DIR/files/etc/config/homeproxy"
+HOMEPROXY_GUARD="$ROOT_DIR/scripts/fix-homeproxy-config.sh"
 
 fail() {
     echo "FAIL: $*" >&2
@@ -20,6 +22,12 @@ assert_contains() {
 test -f "$CONFIG" || fail "missing dedicated JDCloud config"
 test -f "$WORKFLOW" || fail "missing dedicated JDCloud workflow"
 test -x "$VERIFIER" || fail "missing executable image verifier"
+test -s "$HOMEPROXY_DEFAULT" || fail "missing/empty homeproxy default config"
+test -s "$HOMEPROXY_GUARD" || fail "missing homeproxy uci-defaults guard"
+assert_contains "$HOMEPROXY_DEFAULT" "config homeproxy 'infra'"
+assert_contains "$HOMEPROXY_GUARD" '/rom/etc/config/homeproxy'
+assert_contains "$WORKFLOW" 'files/etc/config/homeproxy" files/etc/config/'
+assert_contains "$WORKFLOW" 'fix-homeproxy-config.sh" files/etc/uci-defaults/98-fix-homeproxy-config'
 
 assert_contains "$CONFIG" 'CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01=y'
 assert_contains "$CONFIG" 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_jdcloud_re-ss-01="ipq-wifi-jdcloud_re-ss-01"'
@@ -71,6 +79,16 @@ for duplicate in \
     'package/community/luci-app-tailscale/root/etc/init.d/tailscale'; do
     assert_contains "$WORKFLOW" "rm -f $duplicate"
 done
+
+# CI hygiene: current actions majors and source download cache.
+assert_contains "$WORKFLOW" 'actions/checkout@v7'
+assert_contains "$WORKFLOW" 'actions/upload-artifact@v7'
+assert_contains "$WORKFLOW" 'actions/cache@v6'
+assert_contains "$WORKFLOW" 'retention-days: 90'
+if grep -Fq 'actions/checkout@v4' "$WORKFLOW" || grep -Fq 'actions/upload-artifact@v4' "$WORKFLOW"; then
+    fail "workflow still pins deprecated Node 20 action majors"
+fi
+assert_contains "$WORKFLOW" 'path: openwrt/dl'
 
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/jdcloud-old-image-test.XXXXXX")"
 trap 'rm -rf "$fixture"' EXIT
