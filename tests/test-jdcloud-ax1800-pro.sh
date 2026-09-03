@@ -45,7 +45,7 @@ for package in \
     luci-app-wol luci-app-watchcat luci-app-irqbalance \
     luci-app-nlbwmon luci-app-filemanager luci-app-upnp \
     luci-app-sqm luci-app-ksmbd block-mount kmod-fs-ext4 \
-    htop ethtool; do
+    htop ethtool luci-app-store; do
     assert_contains "$CONFIG" "CONFIG_PACKAGE_${package}=y"
 done
 
@@ -59,6 +59,10 @@ done
 assert_contains "$WORKFLOW" 'SOURCE_BRANCH: 25.12-nss'
 assert_contains "$WORKFLOW" 'MOSDNS_COMMIT: b230ca12cba16aab2c163452bfd76f1631e2a537'
 assert_contains "$WORKFLOW" 'TAILSCALE_LUCI_COMMIT: 534eb3f3acba24dac4e6fee9fa33049b004ef121'
+assert_contains "$WORKFLOW" 'ISTORE_COMMIT: 3fca15b30aeed9ecacb3efc8b4a8b9c2584ad5c7'
+assert_contains "$WORKFLOW" 'https://github.com/linkease/istore.git'
+assert_contains "$WORKFLOW" 'for pkg in luci-app-store luci-lib-taskd luci-lib-xterm taskd; do'
+assert_contains "$WORKFLOW" 'istore/luci/$pkg" package/community/'
 
 dependency_line="$(grep -n -- '- name: Install build dependencies' "$WORKFLOW" | cut -d: -f1)"
 disk_line="$(grep -n -- '- name: Free disk space' "$WORKFLOW" | cut -d: -f1)"

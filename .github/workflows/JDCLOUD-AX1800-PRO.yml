@@ -8,6 +8,7 @@ env:
   SOURCE_BRANCH: 25.12-nss
   MOSDNS_COMMIT: b230ca12cba16aab2c163452bfd76f1631e2a537
   TAILSCALE_LUCI_COMMIT: 534eb3f3acba24dac4e6fee9fa33049b004ef121
+  ISTORE_COMMIT: 3fca15b30aeed9ecacb3efc8b4a8b9c2584ad5c7
   CONFIG_FILE: configs/jdcloud-ax1800-pro.config
   TZ: Asia/Shanghai
 
@@ -77,6 +78,14 @@ jobs:
           rm -f package/community/luci-app-tailscale/root/etc/config/tailscale
           rm -f package/community/luci-app-tailscale/root/etc/init.d/tailscale
 
+          git -C /tmp/jdcloud-packages init istore
+          git -C /tmp/jdcloud-packages/istore remote add origin https://github.com/linkease/istore.git
+          git -C /tmp/jdcloud-packages/istore fetch --depth=1 origin "$ISTORE_COMMIT"
+          git -C /tmp/jdcloud-packages/istore checkout --detach FETCH_HEAD
+          for pkg in luci-app-store luci-lib-taskd luci-lib-xterm taskd; do
+            cp -a "/tmp/jdcloud-packages/istore/luci/$pkg" package/community/
+          done
+
       - name: Install feeds
         run: |
           cd "$OPENWRT_PATH"
@@ -96,7 +105,8 @@ jobs:
           }
           for package in luci-app-homeproxy sing-box luci-app-mosdns \
             luci-app-tailscale luci-app-ddns-go luci-app-nlbwmon \
-            luci-app-filemanager luci-app-upnp luci-app-sqm luci-app-ksmbd; do
+            luci-app-filemanager luci-app-upnp luci-app-sqm luci-app-ksmbd \
+            luci-app-store; do
             grep -q "^CONFIG_PACKAGE_${package}=y$" .config || {
               echo "Missing package after make defconfig: $package" >&2
               exit 1
