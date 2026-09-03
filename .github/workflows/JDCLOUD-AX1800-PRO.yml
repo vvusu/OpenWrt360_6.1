@@ -142,6 +142,7 @@ jobs:
           # upstream default into the image and guard it at first boot.
           cp "$GITHUB_WORKSPACE/files/etc/config/homeproxy" files/etc/config/
           cp "$GITHUB_WORKSPACE/scripts/fix-homeproxy-config.sh" files/etc/uci-defaults/98-fix-homeproxy-config
+          cp "$GITHUB_WORKSPACE/scripts/nss-stability.sh" files/etc/uci-defaults/97-nss-stability
           chmod +x files/etc/uci-defaults/*
           make -j"$(nproc)" || make -j1 V=s
 
