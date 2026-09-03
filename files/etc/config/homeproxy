@@ -29,9 +29,7 @@ config homeproxy 'config'
 	option china_dns_server '223.5.5.5'
 	option routing_mode 'bypass_mainland_china'
 	option routing_port 'common'
-	# NSS builds: keep TCP-only redirect by default. UDP tproxy + NSS/ECM
-	# can deadlock the kernel (hardened further by scripts/nss-stability.sh).
-	option proxy_mode 'redirect'
+	option proxy_mode 'redirect_tproxy'
 	option ipv6_support '1'
 	option github_token ''
 	option log_level 'warn'

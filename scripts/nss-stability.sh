@@ -9,7 +9,7 @@
 #      hang the kernel -> silent watchdog reset with no logs. The baked
 #      default config now uses `redirect` (TCP-only); users can still opt
 #      back into tproxy from LuCI.
-#   3. Silent hangs leave no evidence -> persistent syslog + panic_on_oops.
+#   3. Silent hangs leave no evidence -> persistent syslog black box.
 #
 # This script is defensive by design: every change checks for its marker
 # first and silently skips if the upstream layout has changed.
@@ -61,20 +61,13 @@ if [ -f "$INIT" ] && grep -q '"$outbound_node" != "nil"' "$INIT" \
 	hp_log "installed WAN-wait gate in homeproxy init"
 fi
 
-# --- 3) Persistent syslog black box (survives reboots) ---------------------
+# --- 4) Persistent syslog black box (survives reboots) ---------------------
 mkdir -p /log
 if [ "$(uci -q get system.@system[0].log_file)" != "/log/system.log" ]; then
 	uci -q set system.@system[0].log_file='/log/system.log'
 	uci -q set system.@system[0].log_size='512'
 	uci commit system
 	hp_log "persistent syslog -> /log/system.log (512KB ring)"
-fi
-
-# --- 4) Make kernel oopses loud (panic -> captured by pstore/ramoops) ------
-if ! grep -q 'panic_on_oops' /etc/sysctl.conf; then
-	echo 'kernel.panic_on_oops=1' >> /etc/sysctl.conf
-	sysctl -w kernel.panic_on_oops=1 >/dev/null 2>&1
-	hp_log "enabled kernel.panic_on_oops=1"
 fi
 
 exit 0

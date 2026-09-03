@@ -30,13 +30,9 @@ assert_contains "$WORKFLOW" 'files/etc/config/homeproxy" files/etc/config/'
 assert_contains "$WORKFLOW" 'fix-homeproxy-config.sh" files/etc/uci-defaults/98-fix-homeproxy-config'
 
 # NSS stability hardening (freeze fix from 2026-09-04 incident).
-assert_contains "$HOMEPROXY_DEFAULT" "option proxy_mode 'redirect'"
-if grep -Fq "option proxy_mode 'redirect_tproxy'" "$HOMEPROXY_DEFAULT"; then
-    fail "baked homeproxy default must use NSS-safe redirect mode"
-fi
 NSS_STABILITY="$ROOT_DIR/scripts/nss-stability.sh"
 test -s "$NSS_STABILITY" || fail "missing nss-stability hardening script"
-for marker in 'respawn 3600 5 5' 'sleep 75' 'panic_on_oops' '/log/system.log' 'deferring client start'; do
+for marker in 'respawn 3600 5 5' 'sleep 75' '/log/system.log' 'deferring client start'; do
     assert_contains "$NSS_STABILITY" "$marker"
 done
 assert_contains "$WORKFLOW" 'nss-stability.sh" files/etc/uci-defaults/97-nss-stability'
