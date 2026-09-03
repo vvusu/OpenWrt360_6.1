@@ -9,7 +9,8 @@
 #      hang the kernel -> silent watchdog reset with no logs. The baked
 #      default config now uses `redirect` (TCP-only); users can still opt
 #      back into tproxy from LuCI.
-#   3. Silent hangs leave no evidence -> persistent syslog black box.
+#   3. Silent hangs leave no evidence -> persistent syslog black box
+#      (kept opt-in; not installed by default).
 #
 # This script is defensive by design: every change checks for its marker
 # first and silently skips if the upstream layout has changed.
@@ -46,9 +47,9 @@ if [ -f "$INIT" ] && grep -q '"$outbound_node" != "nil"' "$INIT" \
 			print "\t\t# Settle delay: avoid the WAN-up activation storm. Firewall reload,"
 			print "\t\t# ECM first flows, tailscale rebind and mosdns restart all land within"
 			print "\t\t# ~25s of ifup; injecting sing-box NAT rules into that window froze"
-			print "\t\t# the kernel for ~5 minutes (2026-09-04 incident). Back off 75s and"
+			print "\t\t# the kernel for ~5 minutes (2026-09-04 incident). Back off 90s and"
 			print "\t\t# re-verify the route afterwards."
-			print "\t\tsleep 75"
+			print "\t\tsleep 90"
 			print "\t\tif ! ip route get 223.5.5.5 >/dev/null 2>&1; then"
 			print "\t\t\tlog \"WAN lost during settle delay; deferring client start until WAN is up.\""
 			print "\t\t\treturn 1"
@@ -61,13 +62,10 @@ if [ -f "$INIT" ] && grep -q '"$outbound_node" != "nil"' "$INIT" \
 	hp_log "installed WAN-wait gate in homeproxy init"
 fi
 
-# --- 4) Persistent syslog black box (survives reboots) ---------------------
-mkdir -p /log
-if [ "$(uci -q get system.@system[0].log_file)" != "/log/system.log" ]; then
-	uci -q set system.@system[0].log_file='/log/system.log'
-	uci -q set system.@system[0].log_size='512'
-	uci commit system
-	hp_log "persistent syslog -> /log/system.log (512KB ring)"
-fi
+# --- 3) (optional) persistent syslog black box -----------------------------
+# Disabled by default: the log_file/log_size uci pair survives reboots on
+# its own; enable manually with:
+#   uci set system.@system[0].log_file='/log/system.log'
+#   uci set system.@system[0].log_size='512'; uci commit system; mkdir -p /log
 
 exit 0

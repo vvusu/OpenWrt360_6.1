@@ -32,7 +32,7 @@ assert_contains "$WORKFLOW" 'fix-homeproxy-config.sh" files/etc/uci-defaults/98-
 # NSS stability hardening (freeze fix from 2026-09-04 incident).
 NSS_STABILITY="$ROOT_DIR/scripts/nss-stability.sh"
 test -s "$NSS_STABILITY" || fail "missing nss-stability hardening script"
-for marker in 'respawn 3600 5 5' 'sleep 75' '/log/system.log' 'deferring client start'; do
+for marker in 'respawn 3600 5 5' 'sleep 90' 'deferring client start'; do
     assert_contains "$NSS_STABILITY" "$marker"
 done
 assert_contains "$WORKFLOW" 'nss-stability.sh" files/etc/uci-defaults/97-nss-stability'
